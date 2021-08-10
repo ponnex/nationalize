@@ -1,0 +1,19 @@
+{
+  "env": {
+    "test": {
+      "plugins": [
+        [
+          "module-resolver",
+          {
+            "root": ["."],
+            "alias": {
+              "@": ".",
+              "~": "."
+            }
+          }
+        ],
+        ["@babel/plugin-proposal-private-property-in-object", { "loose": true }]
+      ]
+    }
+  }
+}
