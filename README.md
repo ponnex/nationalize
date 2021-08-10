@@ -1,4 +1,7 @@
 # nationalize
+An 8-hrs Coding challenge to get nationality of a name
+
+The design is inspired by [Markus Gavrilov in Dribbble](https://dribbble.com/shots/14595257-Search-results)
 
 ## Build Setup
 
