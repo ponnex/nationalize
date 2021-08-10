@@ -2,6 +2,7 @@ import _ from 'lodash'
 
 export const state = () => ({
   results: [],
+  recents: [],
   queryResult: {},
   selectedResult: {}
 })
@@ -17,6 +18,11 @@ export const mutations = {
     const results = state.results
     results.unshift(result)
     state.results = _.uniqBy(results, 'name')
+  },
+  PUSH_RECENTS (state, recent) {
+    const recents = state.recents
+    recents.push(recent)
+    state.recents = _.uniqBy(recents, 'name')
   },
   SET_QUERY_RESULT (state, queryResult) {
     state.queryResult = queryResult
@@ -46,6 +52,9 @@ export const actions = {
   },
   setSelectedResult ({ commit }, selectedResult) {
     commit('SET_SELECTED_RESULT', selectedResult)
-    commit('PUSH_RESULT', selectedResult)
+  },
+  pushResult ({ commit }, result) {
+    commit('PUSH_RESULT', result)
+    commit('PUSH_RECENTS', result)
   }
 }

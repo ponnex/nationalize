@@ -25,33 +25,17 @@
         >
       </div>
       <div class="search-results-container" :class="{'show': hasFocus }">
-        <div v-if="!isEmpty(queryResult) && !isEmpty(name)" class="result-container">
+        <div v-if="!isEmpty(queryResult) && !isEmpty(name) && name === queryResult.name" class="result-container">
           <span class="result-title">Results</span>
-          <div v-if="!isEmpty(queryResult.country)" class="result" @click="onSelection(queryResult)">
-            <span>{{ queryResult.name }}</span>
-            <div class="select-container">
-              <span>Select</span>
-              <img src="@/assets/images/enter-key.svg" alt="enter-key" class="enter-key">
-            </div>
-          </div>
-          <div v-else class="no-result">
+          <result v-if="!isEmpty(queryResult.country)" :data="queryResult" @onSelection="onSelection" />
+          <div v-else class="static-result">
             <span>No Result</span>
           </div>
         </div>
         <div class="result-container">
           <span class="result-title">Recent</span>
           <div v-if="!isEmpty(results)">
-            <div
-              v-for="(result, resultIdx) in results"
-              :key="resultIdx"
-              class="result"
-            >
-              <span>{{ result.name }}</span>
-              <div class="select-container">
-                <span>Select</span>
-                <img src="@/assets/images/enter-key.svg" alt="enter-key" class="enter-key">
-              </div>
-            </div>
+            <result v-for="(result, resultIdx) in results" :key="resultIdx" :data="result" @onSelection="onSelection" />
           </div>
           <div v-else class="no-result">
             <span>No recent searches</span>
@@ -59,20 +43,45 @@
         </div>
       </div>
     </card>
+    <div class="view-container">
+      <card class="view items-center justify-center">
+        <div class="p-5">
+          <h1 v-if="!isEmpty(selectedResult)" class="text-gray-500 text-center text-2xl">
+            Result for {{ selectedResult.name }}
+          </h1>
+          <apexchart v-if="!isEmpty(selectedResult)" type="bar" width="500" :options="parseChartOptions()" :series="resultSeries()" />
+          <span v-else>Search for name</span>
+        </div>
+      </card>
+      <card class="view">
+        <div class="w-full p-5">
+          <span class="result-title">Previous Results</span>
+          <div v-if="!isEmpty(recents)">
+            <result v-for="(recent, recentIdx) in recents" :key="recentIdx" :data="recent" @onSelection="onSelectionPrevious" />
+          </div>
+          <div v-else class="no-result">
+            <span>No recent searches</span>
+          </div>
+        </div>
+      </card>
+    </div>
   </div>
 </template>
 
 <script>
 import { mapActions } from 'vuex'
 import _ from 'lodash'
+import card from '~/components/card.vue'
 
 export default {
+  components: { card },
   data () {
     return {
       name: '',
       searchDebounce: Function,
       isEmpty: _.isEmpty,
-      hasFocus: false
+      hasFocus: false,
+      chartOptions: {}
     }
   },
   computed: {
@@ -81,25 +90,65 @@ export default {
         return this.$store.state.nationality.results
       }
     },
+    recents: {
+      get () {
+        return this.$store.state.nationality.recents
+      }
+    },
     queryResult: {
       get () {
         return this.$store.state.nationality.queryResult
+      }
+    },
+    selectedResult: {
+      get () {
+        return this.$store.state.nationality.selectedResult
       }
     }
   },
   created () {
     this.searchDebounce = _.debounce(this.onSearchDebounce.bind(this), 500)
+    this.chartOptions = {
+      ...this.chartOptions,
+      ...{
+        chart: {
+          id: 'vuechart-example',
+          type: 'bar',
+          stacked: false,
+          toolbar: {
+            show: false,
+            tools: {
+              selection: false,
+              zoom: false,
+              zoomin: false,
+              zoomout: false,
+              pan: false
+            }
+          }
+        },
+        yaxis: {
+          max: 100,
+          labels: {
+            formatter (value) {
+              return value.toFixed(0)
+            }
+          }
+        }
+      }
+    }
   },
   methods: {
     ...mapActions({
       fetchNationality: 'nationality/fetchNationalityByName',
-      onSelection: 'nationality/setSelectedResult'
+      setSelectedResult: 'nationality/setSelectedResult',
+      pushResult: 'nationality/pushResult'
     }),
     async onSearchDebounce () {
       await this.fetchNationality(this.name)
     },
     onFocus () {
       this.hasFocus = true
+      this.onSearchDebounce()
     },
     onBlur () {
       this.hasFocus = false
@@ -109,6 +158,52 @@ export default {
         // @TODO: Get first result or recent search
       } else if (event.code === 'Escape') {
         this.onBlur()
+      }
+    },
+    onSelection (data) {
+      this.name = data.name
+      this.setSelectedResult(data)
+      this.pushResult(data)
+    },
+    onSelectionPrevious (data) {
+      this.name = data.name
+      this.setSelectedResult(data)
+    },
+    parseChartOptions () {
+      if (!_.isEmpty(this.selectedResult)) {
+        const results = this.selectedResult.country
+        const categories = _.map(results, (result) => {
+          return result.country_id
+        })
+
+        return {
+          ...this.chartOptions,
+          ...{
+            xaxis: {
+              categories
+            }
+          }
+        }
+      } else {
+        return this.chartOptions
+      }
+    },
+    resultSeries () {
+      if (!_.isEmpty(this.selectedResult)) {
+        const results = this.selectedResult.country
+        const data = _.map(results, (result) => {
+          return (result.probability * 100).toFixed(2)
+        })
+
+        return [{
+          name: 'Nationality',
+          data
+        }]
+      } else {
+        return [{
+          name: 'Nationality',
+          data: []
+        }]
       }
     }
   }
@@ -122,7 +217,9 @@ export default {
 }
 .search {
   &-card {
-    @apply w-9/12 md:w-6/12 rounded-md mx-auto mt-5 overflow-hidden;
+    @apply absolute top-2 w-9/12 md:w-6/12 z-50;
+    margin: auto;
+    top: 20px; left: 0; right: 0;
   }
   &-container {
     @apply flex items-center space-x-3 p-4;
@@ -136,7 +233,7 @@ export default {
   }
   &-results {
     &-container {
-      @apply border-t border-gray-200 p-0 overflow-auto;
+      @apply bg-white rounded-b shadow-lg border-t border-gray-200 p-0 overflow-auto;
       transition: all 0.2s ease-in;
       max-height: 0;
       opacity: 0;
@@ -146,41 +243,21 @@ export default {
         max-height: 50vh;
         opacity: 1;
       }
-
-      .result {
-        @apply flex justify-between cursor-pointer ml-2 rounded-md p-2 hover:bg-gray-200;
-
-          .select-container {
-            @apply hidden items-center text-gray-500;
-            font-size: 12px;
-          }
-
-          .enter-key {
-            @apply ml-2;
-            height: 16px;
-            width: 16px;
-          }
-
-        &:hover {
-          .select-container {
-            @apply flex;
-          }
-        }
-
-        &-container {
-          @apply flex flex-col mb-2;
-
-          .no-result {
-            @apply text-gray-500 ml-2;
-            font-size: 12px;
-          }
-        }
-        &-title {
-          @apply text-gray-500;
-          font-size: 12px;
-        }
-      }
     }
+  }
+}
+
+.result {
+  &-title {
+    @apply text-gray-500;
+    font-size: 12px;
+  }
+}
+
+.view {
+  @apply flex w-6/12 mt-20;
+  &-container {
+    @apply h-full flex m-4 space-x-4;
   }
 }
 </style>
