@@ -1,5 +1,5 @@
 <template>
-  <card class="view items-center justify-center">
+  <card class="flex w-6/12 mt-20 items-center justify-center">
     <div class="p-5">
       <h1 v-if="!isEmpty(selectedResult)" class="text-gray-500 text-center text-2xl">
         Result for {{ selectedResult.name }}
