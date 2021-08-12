@@ -17,7 +17,7 @@
 import card from '@/components/card.vue'
 import search from '@/components/search.vue'
 import graph from '@/components/graph.vue'
-import previous from '@/components/containers/previous.vue'
+import previous from '@/containers/previous.vue'
 
 export default {
   components: { card, search, graph, previous }

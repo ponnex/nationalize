@@ -43,7 +43,7 @@
 import { mapActions } from 'vuex'
 import _ from 'lodash'
 import card from '@/components/card.vue'
-import recent from '@/components/containers/recent.vue'
+import recent from '@/containers/recent.vue'
 
 export default {
   components: { card, recent },
