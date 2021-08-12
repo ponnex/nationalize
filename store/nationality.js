@@ -15,13 +15,13 @@ export const mutations = {
     state.results = results
   },
   PUSH_RESULT (state, result) {
-    const results = state.results
+    const results = _.cloneDeep(state.results)
     results.unshift(result)
     state.results = _.uniqBy(results, 'name')
   },
   PUSH_RECENTS (state, recent) {
-    const recents = state.recents
-    recents.push(recent)
+    const recents = _.cloneDeep(state.recents)
+    recents.unshift(recent)
     state.recents = _.uniqBy(recents, 'name')
   },
   SET_QUERY_RESULT (state, queryResult) {
